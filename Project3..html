@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shopping Cart System</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #22c55e;
+      --accent-2: #3b82f6;
+      --danger: #ef4444;
+      --border: #374151;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 10% 10%, #111827 0%, #0b1220 45%, #0a0f1a 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .app {
+      width: 100%; max-width: 920px;
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
+      overflow: hidden;
+      backdrop-filter: blur(8px);
+    }
+    .header { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; box-shadow: 16px 0 0 #f59e0b, 32px 0 0 #22c55e; }
+    h1 { font-size: 18px; margin: 0; letter-spacing: 0.4px; }
+
+    .content { padding: 22px; display: grid; gap: 16px; }
+
+    .grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
+    @media (min-width: 860px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+    .panel { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .panel-header { padding: 12px 14px; background: #0b1220; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .panel-title { font-weight: 600; }
+    .count { color: var(--muted); font-size: 12px; }
+
+    ul { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; background: rgba(9,14,24,0.6); }
+    li { padding: 12px 14px; border-bottom: 1px solid #101827; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    li:last-child { border-bottom: none; }
+    .empty { padding: 14px; color: var(--muted); font-style: italic; }
+
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+    input[type="text"] { width: 100%; padding: 12px 14px; background: #0b1220; border: 1px solid var(--border); border-radius: 10px; color: var(--text); outline: none; }
+    input[type="text"]:focus { border-color: var(--accent-2); box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+
+    button { padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: #0c1424; color: var(--text); cursor: pointer; transition: transform .05s ease-in, background .2s, border-color .2s; }
+    button:hover { background: #0f1a30; }
+    button:active { transform: translateY(1px); }
+    .btn-add { border-color: rgba(34,197,94,0.5); }
+    .btn-remove { border-color: rgba(239,68,68,0.5); }
+    .btn-check { border-color: rgba(59,130,246,0.5); }
+
+    .status { padding: 12px 14px; background: #0b1220; border: 1px dashed var(--border); border-radius: 10px; color: var(--muted); min-height: 44px; display: grid; align-content: center; }
+    .badge { display: inline-block; padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Shopping Cart System">
+    <div class="header">
+      <div class="dot" aria-hidden="true"></div>
+      <h1>Shopping Cart System</h1>
+    </div>
+
+    <div class="content">
+      <div class="controls" role="group" aria-label="Actions">
+        <input id="productName" type="text" placeholder="Enter product name" aria-label="Product name" />
+        <button class="btn-add" id="btnAdd" title="Add product to cart">Add to Cart</button>
+        <button class="btn-remove" id="btnRemove" title="Remove product from cart">Remove from Cart</button>
+        <button class="btn-check" id="btnCheck" title="Check product availability">Check Availability</button>
+      </div>
+
+      <div id="status" class="status" aria-live="polite">Ready.</div>
+
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-header">
+            <div><span class="panel-title">Inventory</span> <span class="badge">Array</span></div>
+            <div class="count"><span id="invCount">0</span> total</div>
+          </div>
+          <ul id="inventoryList">
+            <li class="empty">No products in inventory.</li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div><span class="panel-title">Cart</span> <span class="badge">Array</span></div>
+            <div class="count"><span id="cartCount">0</span> items</div>
+          </div>
+          <ul id="cartList">
+            <li class="empty">Cart is empty.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Core data stores
+    const inventory = [
+      'Laptop', 'Headphones', 'Keyboard', 'Mouse', 'USB-C Cable', 'Webcam'
+    ];
+    const cart = [];
+
+    // Helpers
+    const q = (id) => document.getElementById(id);
+    const norm = (s) => s.trim().replace(/\s+/g, ' ');
+
+    function setStatus(msg, type = 'info') {
+      const el = q('status');
+      el.textContent = msg;
+      el.style.borderColor = type === 'error' ? 'rgba(239, 68, 68, 0.5)' : type === 'ok' ? 'rgba(34,197,94,0.5)' : 'var(--border)';
+      el.style.color = type === 'error' ? '#fecaca' : type === 'ok' ? '#bbf7d0' : 'var(--muted)';
+    }
+
+    function renderList(listEl, items, emptyMsg) {
+      listEl.innerHTML = '';
+      if (items.length === 0) {
+        listEl.innerHTML = `<li class="empty">${emptyMsg}</li>`;
+        return;
+      }
+      for (const item of items) {
+        const li = document.createElement('li');
+        li.innerHTML = `<span>${item}</span>`;
+        listEl.appendChild(li);
+      }
+    }
+
+    function renderAll() {
+      renderList(q('inventoryList'), inventory, 'No products in inventory.');
+      q('invCount').textContent = String(inventory.length);
+      renderList(q('cartList'), cart, 'Cart is empty.');
+      q('cartCount').textContent = String(cart.length);
+    }
+
+    // Check product availability (in inventory)
+    function isProductAvailable(name) {
+      const n = norm(name);
+      if (!n) {
+        setStatus('Enter a product name to check.', 'error');
+        return false;
+      }
+      const available = inventory.includes(n); // includes
+      setStatus(available ? `Yes, "${n}" is available.` : `No, "${n}" is not in inventory.` , available ? 'ok' : 'info');
+      return available;
+    }
+
+    // Add product to cart
+    function addToCart(name) {
+      const n = norm(name);
+      if (!n) { setStatus('Enter a valid product name to add.', 'error'); return; }
+      if (!inventory.includes(n)) { // includes
+        setStatus(`Cannot add. "${n}" is not in inventory.`, 'error');
+        return;
+      }
+      cart.push(n); // push
+      setStatus(`Added to cart: "${n}"`, 'ok');
+      renderAll();
+    }
+
+    // Remove product from cart (first match)
+    function removeFromCart(name) {
+      const n = norm(name);
+      if (!n) { setStatus('Enter a valid product name to remove.', 'error'); return; }
+      const idx = cart.indexOf(n);
+      if (idx === -1) {
+        setStatus(`"${n}" is not in the cart.`, 'error');
+        return;
+      }
+      cart.splice(idx, 1); // remove one occurrence
+      setStatus(`Removed from cart: "${n}"`, 'ok');
+      renderAll();
+    }
+
+    // Wire up UI
+    const input = q('productName');
+    q('btnAdd').addEventListener('click', () => addToCart(input.value));
+    q('btnRemove').addEventListener('click', () => removeFromCart(input.value));
+    q('btnCheck').addEventListener('click', () => isProductAvailable(input.value));
+
+    // Keyboard shortcuts
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+        addToCart(input.value);
+      } else if (e.key === 'Enter' && e.ctrlKey) {
+        isProductAvailable(input.value);
+      } else if ((e.key === 'Backspace' || e.key === 'Delete') && e.altKey) {
+        removeFromCart(input.value);
+        e.preventDefault();
+      }
+    });
+
+    // Initial render
+    renderAll();
+  </script>
+</body>
+</html>
